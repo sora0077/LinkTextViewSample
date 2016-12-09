@@ -9,17 +9,24 @@
 import UIKit
 
 class ViewController: UIViewController {
+    
+    @IBOutlet var textView: LinkTextView!
 
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
+        
+        textView.texts = [
+            .string("あいうえお"),
+            .link("かきくけこ", { _ in print("かきくけこ") }),
+            .string("さしすせそ"),
+            .string("なにぬねの"),
+            .link("はひふへほマミムメモ", { _ in })
+        ]
     }
 
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
         // Dispose of any resources that can be recreated.
     }
-
-
 }
-
