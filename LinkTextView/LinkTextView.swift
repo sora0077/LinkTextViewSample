@@ -10,17 +10,6 @@ import UIKit
 import UIKit.UIGestureRecognizerSubclass
 
 
-
-private final class TapGestureRecognizer: UILongPressGestureRecognizer {
-    override func canPrevent(_ preventedGestureRecognizer: UIGestureRecognizer) -> Bool {
-        if preventedGestureRecognizer.view is UIScrollView {
-            return false
-        }
-        return true
-    }
-}
-
-
 public final class LinkTextView: UITextView {
     public enum Text {
         case link(String, Action)
@@ -31,34 +20,34 @@ public final class LinkTextView: UITextView {
     
     fileprivate static let Action = "LinkTextView::Action"
     
-    public var textForegroundColor: UIColor? { didSet { updateTexts() } }
-    public var textBackgroundColor: UIColor? { didSet { updateTexts() } }
-    public var linkForegroundColor: UIColor? { didSet { updateTexts() } }
-    public var linkBackgroundColor: UIColor? { didSet { updateTexts() } }
     public var texts: [Text] = [] { didSet { updateTexts() } }
     
     public override var font: UIFont? { didSet { updateTexts() } }
     
-    fileprivate var textAttributes: [String: Any?] {
-        let font = self.font ?? UIFont.systemFont(ofSize: 17)
-        return [
-            NSFontAttributeName: font,
+    public var textAttributes: [String: Any?]?
+    public var linkAttributes: [String: Any?]?
+    public var selectedLinkAttributes: [String: Any?]?
+    
+    fileprivate var _textAttributes: [String: Any?] {
+        return textAttributes ?? [
+            NSFontAttributeName: font ?? UIFont.systemFont(ofSize: 17),
             NSForegroundColorAttributeName: textColor ?? .black
         ]
     }
-    fileprivate var linkAttributes: [String: Any?] {
-        let font = self.font ?? UIFont.systemFont(ofSize: 17)
-        return [
-            NSFontAttributeName: font,
+    fileprivate var _linkAttributes: [String: Any?] {
+        return linkAttributes ?? [
+            NSFontAttributeName: font ?? UIFont.systemFont(ofSize: 17),
             NSForegroundColorAttributeName: UIColor.blue,
             NSUnderlineStyleAttributeName: NSUnderlineStyle.styleSingle.rawValue,
             NSBackgroundColorAttributeName: nil
         ]
     }
-    fileprivate var selectedLinkAttributes: [String: Any?] {
-        var attributes = linkAttributes
-        attributes[NSBackgroundColorAttributeName] = UIColor.black.withAlphaComponent(0.2)
-        return attributes
+    fileprivate var _selectedLinkAttributes: [String: Any?] {
+        return selectedLinkAttributes ?? {
+            var attributes = linkAttributes ?? _linkAttributes
+            attributes[NSBackgroundColorAttributeName] = UIColor.black.withAlphaComponent(0.2)
+            return attributes
+        }()
     }
     
     fileprivate var selected: (action: Text.Action, range: NSRange)?
@@ -94,7 +83,7 @@ public final class LinkTextView: UITextView {
         let string = NSMutableAttributedString()
         let textAttributes: [String: Any] = {
             var attributes: [String: Any] = [:]
-            for (key, val) in self.textAttributes {
+            for (key, val) in _textAttributes {
                 if let val = val {
                     attributes[key] = val
                 }
@@ -103,7 +92,7 @@ public final class LinkTextView: UITextView {
         }()
         let linkAttributes: [String: Any] = {
             var attributes: [String: Any] = [:]
-            for (key, val) in self.linkAttributes {
+            for (key, val) in _linkAttributes {
                 if let val = val {
                     attributes[key] = val
                 }
@@ -184,10 +173,20 @@ extension LinkTextView {
     private func attributedText(with range: NSRange, highlighted: Bool) -> NSAttributedString {
         var attributes = attributedText.attributes(at: range.location, effectiveRange: nil)
         let string = attributedText.mutableCopy() as! NSMutableAttributedString
-        for (key, val) in (highlighted ? selectedLinkAttributes : linkAttributes) {
+        for (key, val) in (highlighted ? _selectedLinkAttributes : _linkAttributes) {
             attributes[key] = val
         }
         string.setAttributes(attributes, range: range)
         return string
+    }
+}
+
+
+private final class TapGestureRecognizer: UILongPressGestureRecognizer {
+    override func canPrevent(_ preventedGestureRecognizer: UIGestureRecognizer) -> Bool {
+        if preventedGestureRecognizer.view is UIScrollView {
+            return false
+        }
+        return true
     }
 }
