@@ -22,7 +22,13 @@ public final class LinkTextView: UITextView {
     
     public var texts: [Text] = [] { didSet { updateTexts() } }
     
-    public override var font: UIFont? { didSet { updateTexts() } }
+    public override var font: UIFont? {
+        didSet {
+            if textAttributes == nil || linkAttributes == nil {
+                updateTexts()
+            }
+        }
+    }
     
     public var textAttributes: [String: Any?]?
     public var linkAttributes: [String: Any?]?
@@ -50,7 +56,8 @@ public final class LinkTextView: UITextView {
         }()
     }
     
-    fileprivate var selected: (action: Text.Action, range: NSRange)?
+    fileprivate let validSize = CGSize(width: 44, height: 44)
+    fileprivate var selected: (action: Text.Action, range: NSRange, location: CGPoint)?
     
     public override init(frame: CGRect, textContainer: NSTextContainer?) {
         super.init(frame: frame, textContainer: textContainer)
@@ -119,7 +126,8 @@ extension LinkTextView {
         switch gesture.state {
         case .began:
             tapBegan(gesture)
-        case .changed:()
+        case .changed:
+            tapMoved(gesture)
         case .ended:
             tapEnded(gesture)
         default:
@@ -129,14 +137,14 @@ extension LinkTextView {
     
     private func tapBegan(_ gesture: UIGestureRecognizer) {
         if let (action, range) = lookupAction(gesture) {
-            selected = (action, range)
+            selected = (action, range, gesture.location(in: window))
             attributedText = attributedText(with: range, highlighted: true)
             setNeedsDisplay()
         }
     }
     
     private func tapEnded(_ gesture: UIGestureRecognizer) {
-        if let (action, range) = selected {
+        if let (action, range, _) = selected {
             attributedText = attributedText(with: range, highlighted: false)
             setNeedsDisplay()
             selected = nil
@@ -145,10 +153,20 @@ extension LinkTextView {
     }
     
     private func tapCancelled(_ gesture: UIGestureRecognizer) {
-        if let (_, range) = selected {
+        if let (_, range, _) = selected {
             attributedText = attributedText(with: range, highlighted: false)
             setNeedsDisplay()
             selected = nil
+        }
+    }
+    
+    private func tapMoved(_ gesture: UIGestureRecognizer) {
+        if let (_, _, location) = selected {
+            let current = gesture.location(in: window)
+            let diff = (x: abs(current.x - location.x), y: abs(current.y - location.y))
+            if diff.x > validSize.width || diff.y > validSize.height {
+                gesture.state = .cancelled
+            }
         }
     }
     
